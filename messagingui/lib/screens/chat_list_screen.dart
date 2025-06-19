@@ -979,7 +979,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         backgroundColor: const Color(0xFFFF7043),
         title: const Row(
           children: [
-            Icon(Icons.restaurant, color: Colors.white),
+            Icon(Icons.restaurant, color: Colors.white, size: 24),
             SizedBox(width: 8),
             Text(
               'SpoonUp',
@@ -993,15 +993,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.search, color: Colors.white),
-            onPressed: () {
-              // Implement search functionality
-            },
-          ),
-          IconButton(
             icon: const Icon(Icons.more_vert, color: Colors.white),
             onPressed: () {
-              // Implement menu
+              _showAppMenu();
             },
           ),
         ],
@@ -1079,6 +1073,482 @@ class _ChatListScreenState extends State<ChatListScreen> {
         backgroundColor: const Color(0xFFFF7043),
         child: const Icon(Icons.add, color: Colors.white),
       ),
+    );
+  }
+
+  void _showAppMenu() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle bar
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            
+            // App menu title
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF7043).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.restaurant,
+                    color: Color(0xFFFF7043),
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'SpoonUp Menu',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2C2C2C),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 30),
+            
+            // Search option
+            _buildMenuOption(
+              icon: Icons.search,
+              title: 'Search',
+              subtitle: 'Search chats and recipes',
+              color: const Color(0xFF2196F3),
+              onTap: () {
+                Navigator.pop(context);
+                _showSearchDialog();
+              },
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Settings option
+            _buildMenuOption(
+              icon: Icons.settings,
+              title: 'Settings',
+              subtitle: 'App preferences and account',
+              color: const Color(0xFF757575),
+              onTap: () {
+                Navigator.pop(context);
+                _showSettingsDialog();
+              },
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // About option
+            _buildMenuOption(
+              icon: Icons.info_outline,
+              title: 'About SpoonUp',
+              subtitle: 'Version and app information',
+              color: const Color(0xFFFF7043),
+              onTap: () {
+                Navigator.pop(context);
+                _showAboutDialog();
+              },
+            ),
+            
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMenuOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 15),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF2C2C2C),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: Colors.grey[400],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSearchDialog() {
+    final TextEditingController searchTextController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2196F3).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.search,
+                  color: Color(0xFF2196F3),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Search',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF2C2C2C),
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+          content: TextField(
+            controller: searchTextController,
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: 'Search chats, recipes, or ingredients...',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey[300]!),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFF2196F3)),
+              ),
+              prefixIcon: const Icon(Icons.search, color: Color(0xFF2196F3)),
+            ),
+            onChanged: (value) {
+              searchController.text = value;
+              _filterChats();
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                searchController.text = searchTextController.text;
+                _filterChats();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2196F3),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                elevation: 0,
+              ),
+              child: const Text(
+                'Search',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showSettingsDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF757575).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.settings,
+                  color: Color(0xFF757575),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Settings',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF2C2C2C),
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'App Settings',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF2C2C2C),
+                ),
+              ),
+              SizedBox(height: 16),
+              Row(
+                children: [
+                  Icon(Icons.notifications, color: Color(0xFFFF7043), size: 20),
+                  SizedBox(width: 12),
+                  Text('Notifications enabled'),
+                ],
+              ),
+              SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(Icons.dark_mode, color: Color(0xFF757575), size: 20),
+                  SizedBox(width: 12),
+                  Text('Light theme'),
+                ],
+              ),
+              SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(Icons.language, color: Color(0xFF2196F3), size: 20),
+                  SizedBox(width: 12),
+                  Text('English (Default)'),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Close',
+                style: TextStyle(
+                  color: Color(0xFF757575),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _showSnackBar('Settings saved', Icons.check);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF757575),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                elevation: 0,
+              ),
+              child: const Text(
+                'Save',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showAboutDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF7043).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.restaurant,
+                  color: Color(0xFFFF7043),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'About SpoonUp',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF2C2C2C),
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'SpoonUp - Cook & Chat',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFFF7043),
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Version 1.0.0',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                ),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Connect with fellow food lovers, share recipes, and discover new cooking techniques together!',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF2C2C2C),
+                ),
+              ),
+              SizedBox(height: 16),
+              Row(
+                children: [
+                  Icon(Icons.email, color: Color(0xFF2196F3), size: 16),
+                  SizedBox(width: 8),
+                  Text(
+                    'support@spoonup.com',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF2196F3),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.web, color: Color(0xFF4CAF50), size: 16),
+                  SizedBox(width: 8),
+                  Text(
+                    'www.spoonup.com',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF4CAF50),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Close',
+                style: TextStyle(
+                  color: Color(0xFFFF7043),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
