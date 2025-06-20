@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../models/chat.dart';
 import '../models/message.dart';
 import '../widgets/message_bubble.dart';
@@ -107,8 +108,9 @@ class _ChatScreenState extends State<ChatScreen>
       senderName: 'You',
       content: text,
       timestamp: DateTime.now(),
+      isFromCurrentUser: true, // Aggiunto questo parametro
       isSent: false,
-      replyToMessage: _replyingToMessage, // Aggiungi la risposta se presente
+      replyToMessage: _replyingToMessage,
     );
 
     setState(() {
@@ -416,15 +418,15 @@ class _ChatScreenState extends State<ChatScreen>
   IconData _getCookingLevelIcon() {
     switch (widget.chat.cookingLevel) {
       case 'Novice':
-        return Icons.egg_outlined;
+        return FontAwesomeIcons.spoon;
       case 'Home Cook':
-        return Icons.kitchen;
+        return Icons.soup_kitchen;
       case 'Chef':
-        return Icons.restaurant;
+        return FontAwesomeIcons.spoon;
       case 'Master Chef':
         return Icons.military_tech;
       default:
-        return Icons.person;
+        return FontAwesomeIcons.spoon;
     }
   }
 
@@ -476,10 +478,12 @@ class _ChatScreenState extends State<ChatScreen>
                 child: CircleAvatar(
                   radius: 20,
                   backgroundColor: Colors.transparent,
-                  child: Icon(
-                    _getCookingLevelIcon(),
-                    color: Colors.white,
-                    size: 20,
+                  child: Center(
+                    child: FaIcon(
+                      _getCookingLevelIcon(),
+                      color: Colors.white,
+                      size: 18,
+                    ),
                   ),
                 ),
               ),
@@ -720,10 +724,12 @@ class _ChatScreenState extends State<ChatScreen>
               ),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.restaurant,
-              color: Colors.white,
-              size: 18,
+            child: const Center(
+              child: FaIcon(
+                FontAwesomeIcons.spoon,
+                color: Colors.white,
+                size: 16,
+              ),
             ),
           ),
           const SizedBox(width: 8),
@@ -866,6 +872,7 @@ class _ChatScreenState extends State<ChatScreen>
       senderName: 'You',
       content: 'Photo shared',
       timestamp: DateTime.now(),
+      isFromCurrentUser: true, // Aggiunto questo parametro
       type: MessageType.image,
       mediaUrl: 'https://picsum.photos/400/300?random=${DateTime.now().millisecondsSinceEpoch}',
       isSent: false,
@@ -901,6 +908,7 @@ class _ChatScreenState extends State<ChatScreen>
       senderName: 'You',
       content: 'Video shared',
       timestamp: DateTime.now(),
+      isFromCurrentUser: true, // Aggiunto questo parametro
       type: MessageType.video,
       mediaUrl: 'https://picsum.photos/400/300?random=${DateTime.now().millisecondsSinceEpoch}',
       isSent: false,
@@ -963,6 +971,7 @@ class _ChatScreenState extends State<ChatScreen>
       senderName: 'You',
       content: 'Voice message',
       timestamp: DateTime.now(),
+      isFromCurrentUser: true, // Aggiunto questo parametro
       type: MessageType.voice,
       isSent: false,
       replyToMessage: _replyingToMessage,
@@ -1042,6 +1051,7 @@ class _ChatScreenState extends State<ChatScreen>
                 senderName: 'You',
                 content: 'Homemade Carbonara Recipe',
                 timestamp: DateTime.now(),
+                isFromCurrentUser: true, // Aggiunto questo parametro
                 type: MessageType.recipe,
                 isSent: false,
                 replyToMessage: _replyingToMessage,

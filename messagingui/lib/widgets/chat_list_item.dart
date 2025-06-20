@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../models/chat.dart';
 
 class ChatListItem extends StatelessWidget {
@@ -63,10 +64,12 @@ class ChatListItem extends StatelessWidget {
                   child: CircleAvatar(
                     radius: 28,
                     backgroundColor: Colors.transparent,
-                    child: Icon(
-                      _getCookingLevelIcon(),
-                      color: Colors.white,
-                      size: 28,
+                    child: Center(
+                      child: FaIcon(
+                        FontAwesomeIcons.spoon,
+                        color: Colors.white,
+                        size: 24,
+                      ),
                     ),
                   ),
                 ),
@@ -102,10 +105,12 @@ class ChatListItem extends StatelessWidget {
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 1),
                     ),
-                    child: const Icon(
-                      Icons.restaurant,
-                      size: 8,
-                      color: Colors.white,
+                    child: const Center(
+                      child: FaIcon(
+                        FontAwesomeIcons.spoon,
+                        size: 6,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
@@ -276,15 +281,15 @@ class ChatListItem extends StatelessWidget {
   IconData _getCookingLevelIcon() {
     switch (chat.cookingLevel) {
       case 'Novice':
-        return Icons.egg_outlined;
+        return FontAwesomeIcons.spoon;
       case 'Home Cook':
-        return Icons.kitchen;
+        return Icons.soup_kitchen;
       case 'Chef':
-        return Icons.restaurant;
+        return FontAwesomeIcons.spoon;
       case 'Master Chef':
-        return Icons.military_tech; // Chef's hat equivalent
+        return Icons.military_tech;
       default:
-        return Icons.person;
+        return FontAwesomeIcons.spoon;
     }
   }
 

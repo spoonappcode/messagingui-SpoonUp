@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../models/chat.dart';
 
 class ChatSettingsBottomSheet extends StatelessWidget {
@@ -57,10 +58,12 @@ class ChatSettingsBottomSheet extends StatelessWidget {
                 child: CircleAvatar(
                   radius: 25,
                   backgroundColor: Colors.transparent,
-                  child: Icon(
-                    _getCookingLevelIcon(),
-                    color: Colors.white,
-                    size: 25,
+                  child: Center(
+                    child: FaIcon(
+                      _getCookingLevelIcon(),
+                      color: Colors.white,
+                      size: 22,
+                    ),
                   ),
                 ),
               ),
@@ -268,15 +271,15 @@ class ChatSettingsBottomSheet extends StatelessWidget {
   IconData _getCookingLevelIcon() {
     switch (chat.cookingLevel) {
       case 'Novice':
-        return Icons.egg_outlined;
+        return FontAwesomeIcons.spoon;
       case 'Home Cook':
-        return Icons.kitchen;
+        return Icons.soup_kitchen;
       case 'Chef':
-        return Icons.restaurant;
+        return FontAwesomeIcons.spoon;
       case 'Master Chef':
         return Icons.military_tech;
       default:
-        return Icons.person;
+        return FontAwesomeIcons.spoon;
     }
   }
 }

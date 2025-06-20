@@ -30,7 +30,7 @@ class StoryReactionService {
       senderName: currentUserName,
       content: reaction,
       timestamp: DateTime.now(),
-      isFromCurrentUser: true,
+      isFromCurrentUser: true, // Aggiunto questo parametro
       type: MessageType.storyReaction,
       storyId: storyId,
       storyOwnerName: storyOwnerName,

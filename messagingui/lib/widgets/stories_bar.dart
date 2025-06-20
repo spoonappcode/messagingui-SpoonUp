@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../models/story.dart';
 import 'story_item.dart';
 import 'story_viewer.dart';
@@ -177,8 +178,8 @@ class _StoriesBarState extends State<StoriesBar> {
                     color: const Color(0xFFFF7043).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(
-                    Icons.auto_stories,
+                  child: const FaIcon(
+                    FontAwesomeIcons.spoon,
                     color: Color(0xFFFF7043),
                     size: 20,
                   ),

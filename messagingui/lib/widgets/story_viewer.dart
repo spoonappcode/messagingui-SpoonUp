@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'dart:async';
 import '../models/story.dart';
 
@@ -423,7 +424,7 @@ class _StoryViewerState extends State<StoryViewer>
                           ),
                         ),
                       ),
-                    );
+                  );
                   },
                 ),
               ),
@@ -473,10 +474,10 @@ class _StoryViewerState extends State<StoryViewer>
                                             ),
                                           ],
                                         ),
-                                        child: Icon(
+                                        child: FaIcon(
                                           widget.stories[_currentIndex].mediaType == 'video'
                                               ? Icons.videocam
-                                              : Icons.restaurant,
+                                              : FontAwesomeIcons.spoon,
                                           color: Colors.white,
                                           size: 16,
                                         ),
@@ -982,8 +983,8 @@ class _StoryViewerState extends State<StoryViewer>
                 width: 1,
               ),
             ),
-            child: const Icon(
-              Icons.restaurant_menu,
+            child: const FaIcon(
+              FontAwesomeIcons.spoon,
               color: Colors.white,
               size: 60,
             ),

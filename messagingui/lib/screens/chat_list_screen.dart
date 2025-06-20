@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../models/chat.dart';
 import '../models/story.dart';
 import '../widgets/chat_list_item.dart';
@@ -944,15 +945,15 @@ class _ChatListScreenState extends State<ChatListScreen> {
   IconData _getCookingLevelIcon(String level) {
     switch (level) {
       case 'Novice':
-        return Icons.egg_outlined;
+        return FontAwesomeIcons.spoon;
       case 'Home Cook':
-        return Icons.kitchen;
+        return Icons.soup_kitchen;
       case 'Chef':
-        return Icons.restaurant;
+        return FontAwesomeIcons.spoon;
       case 'Master Chef':
         return Icons.military_tech;
       default:
-        return Icons.person;
+        return FontAwesomeIcons.spoon;
     }
   }
 
@@ -985,7 +986,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
           backgroundColor: const Color(0xFFFF7043),
           title: const Row(
             children: [
-              Icon(Icons.restaurant, color: Colors.white, size: 24),
+              FaIcon(FontAwesomeIcons.spoon, color: Colors.white, size: 24),
               SizedBox(width: 8),
               Text(
                 'SpoonUp',
@@ -1033,8 +1034,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.restaurant_menu,
+                          FaIcon(
+                            FontAwesomeIcons.spoon,
                             size: 64,
                             color: Colors.grey,
                           ),
@@ -1124,7 +1125,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(
-                    Icons.restaurant,
+                    Icons.dining, // Changed from Icons.restaurant
                     color: Color(0xFFFF7043),
                     size: 20,
                   ),
@@ -1468,7 +1469,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
-                  Icons.restaurant,
+                  Icons.dining, // Changed from Icons.restaurant
                   color: Color(0xFFFF7043),
                   size: 20,
                 ),

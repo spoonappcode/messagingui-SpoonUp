@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../models/message.dart';
 
 class MessageBubble extends StatelessWidget {
@@ -179,10 +180,12 @@ class MessageBubble extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: const Icon(
-                    Icons.person,
-                    color: Colors.white,
-                    size: 18,
+                  child: const Center(
+                    child: FaIcon(
+                      FontAwesomeIcons.spoon,
+                      color: Colors.white,
+                      size: 16,
+                    ),
                   ),
                 ),
             ],
@@ -324,10 +327,12 @@ class MessageBubble extends StatelessWidget {
           ),
         ],
       ),
-      child: const Icon(
-        Icons.restaurant,
-        color: Colors.white,
-        size: 18,
+      child: const Center(
+        child: FaIcon(
+          FontAwesomeIcons.spoon,
+          color: Colors.white,
+          size: 16,
+        ),
       ),
     );
   }

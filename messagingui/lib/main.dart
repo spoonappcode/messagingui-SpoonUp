@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'screens/chat_list_screen.dart';
 import 'widgets/stories_widget.dart';
 
@@ -100,7 +101,10 @@ class MyHomePage extends StatelessWidget {
                 return ListTile(
                   leading: CircleAvatar(
                     backgroundColor: const Color(0xFFFFF3E0),
-                    child: Text('${index + 1}'),
+                    child: FaIcon(
+                      FontAwesomeIcons.spoon,
+                      color: Color(0xFFFF7043),
+                    ),
                   ),
                   title: Text('Contact ${index + 1}'),
                   subtitle: const Text('Last message...'),
@@ -119,7 +123,7 @@ class MyHomePage extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {},
-        child: const Icon(Icons.message),
+        child: const FaIcon(FontAwesomeIcons.spoon),
       ),
     );
   }

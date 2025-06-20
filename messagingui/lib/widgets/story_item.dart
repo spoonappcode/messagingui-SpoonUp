@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../models/story.dart';
 
 class StoryItem extends StatelessWidget {
@@ -97,7 +98,7 @@ class StoryItem extends StatelessWidget {
   // Optimized icon selection
   IconData _getStoryIcon() {
     if (story.isOwn) return Icons.add;
-    return story.mediaType == 'video' ? Icons.play_circle_fill : Icons.restaurant;
+    return story.mediaType == 'video' ? Icons.play_circle_fill : FontAwesomeIcons.spoon;
   }
 
   // Optimized name display
