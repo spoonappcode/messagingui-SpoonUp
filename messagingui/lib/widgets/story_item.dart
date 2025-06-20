@@ -11,13 +11,24 @@ class StoryItem extends StatelessWidget {
     required this.onTap,
   });
 
+  // Optimized color computation with caching
+  static const Map<String, List<Color>> _gradientCache = {
+    'viewed': [Color(0xFFBDBDBD), Color(0xFF9E9E9E)],
+    'unviewed': [Color(0xFFFF7043), Color(0xFFFF5722)],
+  };
+
   @override
   Widget build(BuildContext context) {
+    // Optimize gradient selection
+    final gradientKey = (story.isOwn || !story.isViewed) ? 'unviewed' : 'viewed';
+    final gradientColors = _gradientCache[gradientKey];
+    
     return GestureDetector(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(right: 12),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Stack(
               children: [
@@ -26,14 +37,14 @@ class StoryItem extends StatelessWidget {
                   height: 60,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: story.isOwn || !story.isViewed
-                        ? const LinearGradient(
-                            colors: [Color(0xFFFF6B35), Color(0xFFFFB74D)],
+                    gradient: gradientColors != null
+                        ? LinearGradient(
+                            colors: gradientColors,
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           )
                         : null,
-                    color: story.isViewed && !story.isOwn ? Colors.grey[300] : null,
+                    color: gradientColors == null ? Colors.grey[300] : null,
                   ),
                   child: Container(
                     margin: const EdgeInsets.all(2),
@@ -48,35 +59,18 @@ class StoryItem extends StatelessWidget {
                         color: Colors.grey[300],
                       ),
                       child: Icon(
-                        story.isOwn 
-                            ? Icons.add
-                            : (story.mediaType == 'video' 
-                                ? Icons.play_circle_fill 
-                                : Icons.restaurant),
-                        color: story.isOwn ? const Color(0xFFFF6B35) : Colors.grey[600],
+                        _getStoryIcon(),
+                        color: story.isOwn ? const Color(0xFFFF7043) : Colors.grey[600],
                         size: 24,
                       ),
                     ),
                   ),
                 ),
                 if (story.mediaType == 'video' && !story.isOwn)
-                  Positioned(
+                  const Positioned(
                     bottom: 2,
                     right: 2,
-                    child: Container(
-                      width: 16,
-                      height: 16,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFF6B35),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1),
-                      ),
-                      child: const Icon(
-                        Icons.videocam,
-                        color: Colors.white,
-                        size: 10,
-                      ),
-                    ),
+                    child: _VideoIndicator(),
                   ),
               ],
             ),
@@ -84,7 +78,7 @@ class StoryItem extends StatelessWidget {
             SizedBox(
               width: 60,
               child: Text(
-                story.isOwn ? 'Your Story' : story.userName.split(' ').first,
+                _getDisplayName(),
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
@@ -96,6 +90,42 @@ class StoryItem extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // Optimized icon selection
+  IconData _getStoryIcon() {
+    if (story.isOwn) return Icons.add;
+    return story.mediaType == 'video' ? Icons.play_circle_fill : Icons.restaurant;
+  }
+
+  // Optimized name display
+  String _getDisplayName() {
+    if (story.isOwn) return 'Your Story';
+    final nameParts = story.userName.split(' ');
+    return nameParts.isNotEmpty ? nameParts.first : story.userName;
+  }
+}
+
+// Optimized video indicator as separate widget
+class _VideoIndicator extends StatelessWidget {
+  const _VideoIndicator();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 16,
+      height: 16,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFF7043),
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 1),
+      ),
+      child: const Icon(
+        Icons.videocam,
+        color: Colors.white,
+        size: 10,
       ),
     );
   }

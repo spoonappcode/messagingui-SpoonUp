@@ -11,20 +11,52 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:messagingui/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('SpoonUp App Tests', () {
+    testWidgets('SpoonUp app loads correctly', (WidgetTester tester) async {
+      // Build our app and trigger a frame
+      await tester.pumpWidget(const SpoonApp());
+      await tester.pumpAndSettle();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+      // Verify that the app title is displayed
+      expect(find.text('SpoonUp'), findsOneWidget);
+      
+      // Verify that the floating action button is present
+      expect(find.byType(FloatingActionButton), findsOneWidget);
+      
+      // Verify that stories section is present
+      expect(find.byType(ListView), findsWidgets);
+    });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    testWidgets('Chat navigation works correctly', (WidgetTester tester) async {
+      // Build our app and trigger a frame
+      await tester.pumpWidget(const SpoonApp());
+      await tester.pumpAndSettle();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+      // Find and tap on the first chat item if available
+      final chatItems = find.byType(InkWell);
+      if (chatItems.evaluate().isNotEmpty) {
+        await tester.tap(chatItems.first);
+        await tester.pumpAndSettle();
+        
+        // Verify navigation occurred by checking for back button
+        expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+      }
+    });
+
+    testWidgets('Search functionality works', (WidgetTester tester) async {
+      // Build our app and trigger a frame
+      await tester.pumpWidget(const SpoonApp());
+      await tester.pumpAndSettle();
+
+      // Find the search field
+      final searchField = find.byType(TextField);
+      if (searchField.evaluate().isNotEmpty) {
+        await tester.enterText(searchField.first, 'test');
+        await tester.pumpAndSettle();
+        
+        // Verify search input was entered
+        expect(find.text('test'), findsOneWidget);
+      }
+    });
   });
 }

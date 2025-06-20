@@ -31,26 +31,28 @@ static int g_active_window_count = 0;
 
 using EnableNonClientDpiScaling = BOOL __stdcall(HWND hwnd);
 
-// Scale helper to convert logical scaler values to physical using passed in
-// scale factor
-int Scale(int source, double scale_factor) {
+// Optimized Scale helper with inline for better performance
+inline int Scale(int source, double scale_factor) {
   return static_cast<int>(source * scale_factor);
 }
 
-// Dynamically loads the |EnableNonClientDpiScaling| from the User32 module.
-// This API is only needed for PerMonitor V1 awareness mode.
+// Optimized DPI support with error checking
 void EnableFullDpiSupportIfAvailable(HWND hwnd) {
-  HMODULE user32_module = LoadLibraryA("User32.dll");
+  static HMODULE user32_module = nullptr;
+  static EnableNonClientDpiScaling* enable_non_client_dpi_scaling = nullptr;
+  
+  // Cache the module and function pointer for better performance
   if (!user32_module) {
-    return;
-  }
-  auto enable_non_client_dpi_scaling =
-      reinterpret_cast<EnableNonClientDpiScaling*>(
+    user32_module = LoadLibraryA("User32.dll");
+    if (user32_module) {
+      enable_non_client_dpi_scaling = reinterpret_cast<EnableNonClientDpiScaling*>(
           GetProcAddress(user32_module, "EnableNonClientDpiScaling"));
-  if (enable_non_client_dpi_scaling != nullptr) {
+    }
+  }
+  
+  if (enable_non_client_dpi_scaling) {
     enable_non_client_dpi_scaling(hwnd);
   }
-  FreeLibrary(user32_module);
 }
 
 }  // namespace

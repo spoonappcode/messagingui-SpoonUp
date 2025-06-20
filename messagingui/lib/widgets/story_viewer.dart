@@ -29,6 +29,13 @@ class _StoryViewerState extends State<StoryViewer>
   final int _storyDuration = 5; // seconds
   bool _isPaused = false;
   bool _isDisposed = false;
+  final TextEditingController _replyController = TextEditingController();
+  final FocusNode _replyFocusNode = FocusNode();
+  bool _showReplyInput = false;
+  bool _isTypingReply = false;
+  bool _showUI = true;
+  late AnimationController _uiAnimationController;
+  late Animation<double> _uiFadeAnimation;
 
   @override
   void initState() {
@@ -53,8 +60,50 @@ class _StoryViewerState extends State<StoryViewer>
         vsync: this,
       ),
     );
+
+    // UI fade animation controller
+    _uiAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
     
+    _uiFadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _uiAnimationController,
+      curve: Curves.easeInOut,
+    ));
+
+    _uiAnimationController.forward();
     _startCurrentStory();
+
+    // Auto-hide UI after 3 seconds
+    _scheduleUIHide();
+  }
+
+  void _scheduleUIHide() {
+    Timer(const Duration(seconds: 3), () {
+      if (mounted && !_showReplyInput && !_isPaused) {
+        setState(() {
+          _showUI = false;
+        });
+        _uiAnimationController.reverse();
+      }
+    });
+  }
+
+  void _toggleUI() {
+    setState(() {
+      _showUI = !_showUI;
+    });
+    
+    if (_showUI) {
+      _uiAnimationController.forward();
+      _scheduleUIHide();
+    } else {
+      _uiAnimationController.reverse();
+    }
   }
 
   void _startCurrentStory() {
@@ -166,11 +215,98 @@ class _StoryViewerState extends State<StoryViewer>
     }
   }
 
+  void _toggleReplyInput() {
+    setState(() {
+      _showReplyInput = !_showReplyInput;
+      _showUI = true;
+    });
+    
+    if (_showReplyInput) {
+      _pauseStory();
+      _replyFocusNode.requestFocus();
+      _uiAnimationController.forward();
+    } else {
+      _resumeStory();
+      _replyController.clear();
+      _scheduleUIHide();
+    }
+  }
+
+  void _sendStoryReply() {
+    final replyText = _replyController.text.trim();
+    if (replyText.isEmpty) return;
+
+    final currentStory = widget.stories[_currentIndex];
+    
+    // Simulate sending reply
+    _showReplyConfirmation(currentStory.userName, replyText);
+    
+    // Clear and hide input
+    _replyController.clear();
+    setState(() {
+      _showReplyInput = false;
+    });
+    
+    _resumeStory();
+  }
+
+  void _sendQuickReaction(String emoji) {
+    final currentStory = widget.stories[_currentIndex];
+    
+    // Show reaction animation
+    _showReactionAnimation(emoji);
+    
+    // Simulate sending reaction
+    _showReplyConfirmation(currentStory.userName, emoji);
+  }
+
+  void _showReplyConfirmation(String userName, String reply) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check, color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Reply sent to $userName: "$reply"',
+                style: const TextStyle(fontSize: 14),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFFFF7043),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
+  }
+
+  void _showReactionAnimation(String emoji) {
+    final overlay = Overlay.of(context);
+    late OverlayEntry overlayEntry;
+    
+    overlayEntry = OverlayEntry(
+      builder: (context) => AnimatedReactionWidget(
+        emoji: emoji,
+        onComplete: () => overlayEntry.remove(),
+      ),
+    );
+    
+    overlay.insert(overlayEntry);
+  }
+
   @override
   void dispose() {
     _isDisposed = true;
     _timer?.cancel();
     _pageController.dispose();
+    _replyController.dispose();
+    _replyFocusNode.dispose();
+    _uiAnimationController.dispose();
     for (var controller in _progressControllers) {
       controller.dispose();
     }
@@ -188,357 +324,528 @@ class _StoryViewerState extends State<StoryViewer>
       );
     }
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: GestureDetector(
-        onTapDown: (details) {
-          final screenWidth = MediaQuery.of(context).size.width;
-          if (details.globalPosition.dx < screenWidth / 3) {
-            // Left tap - previous story (don't pause)
-            _previousStory();
-          } else if (details.globalPosition.dx > screenWidth * 2 / 3) {
-            // Right tap - next story (don't pause)
-            _nextStory();
-          } else {
-            // Center tap - pause
-            _pauseStory();
-          }
-        },
-        onTapUp: (details) {
-          final screenWidth = MediaQuery.of(context).size.width;
-          if (details.globalPosition.dx >= screenWidth / 3 && 
-              details.globalPosition.dx <= screenWidth * 2 / 3) {
-            // Center tap up - resume
-            _resumeStory();
-          }
-        },
-        onTapCancel: () {
-          _resumeStory();
-        },
-        onVerticalDragEnd: (details) {
-          // Handle vertical swipe down to close
-          if (details.primaryVelocity != null && details.primaryVelocity! > 300) {
-            _closeViewer();
-          }
-        },
-        child: Stack(
-          children: [
-            // Stories PageView
-            PageView.builder(
-              controller: _pageController,
-              onPageChanged: (index) {
-                if (!_isDisposed && mounted) {
-                  setState(() {
-                    _currentIndex = index;
-                  });
-                  _startCurrentStory();
-                }
-              },
-              itemCount: widget.stories.length,
-              itemBuilder: (context, index) {
-                if (index >= widget.stories.length) return Container();
-                final story = widget.stories[index];
-                return _buildStoryContent(story);
-              },
-            ),
+    return GestureDetector(
+      onTap: () {
+        // Nasconde la tastiera quando presente
+        FocusScope.of(context).unfocus();
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: GestureDetector(
+          onTapDown: (details) {
+            final screenWidth = MediaQuery.of(context).size.width;
+            if (_showReplyInput) return;
             
-            // Top overlay with progress bars and user info
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                padding: EdgeInsets.fromLTRB(
-                  16,
-                  MediaQuery.of(context).padding.top + 16,
-                  16,
-                  16,
-                ),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withOpacity(0.7),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    // Progress bars
-                    Row(
-                      children: List.generate(
-                        widget.stories.length,
-                        (index) => Expanded(
-                          child: Container(
-                            height: 3,
-                            margin: EdgeInsets.only(
-                              right: index < widget.stories.length - 1 ? 4 : 0,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.3),
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                            child: index < _progressControllers.length 
-                                ? AnimatedBuilder(
-                                    animation: _progressControllers[index],
-                                    builder: (context, child) {
-                                      return FractionallySizedBox(
-                                        alignment: Alignment.centerLeft,
-                                        widthFactor: _progressControllers[index].value,
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.circular(2),
+            if (details.globalPosition.dx < screenWidth / 3) {
+              _previousStory();
+            } else if (details.globalPosition.dx > screenWidth * 2 / 3) {
+              _nextStory();
+            } else {
+              _toggleUI();
+            }
+          },
+          onVerticalDragEnd: (details) {
+            if (_showReplyInput) return;
+            
+            if (details.primaryVelocity != null && details.primaryVelocity! > 300) {
+              _closeViewer();
+            }
+          },
+          child: Stack(
+            children: [
+              // Stories content
+              PageView.builder(
+                controller: _pageController,
+                onPageChanged: (index) {
+                  if (!_isDisposed && mounted) {
+                    setState(() {
+                      _currentIndex = index;
+                    });
+                    _startCurrentStory();
+                  }
+                },
+                itemCount: widget.stories.length,
+                itemBuilder: (context, index) {
+                  if (index >= widget.stories.length) return Container();
+                  final story = widget.stories[index];
+                  return _buildStoryContent(story);
+                },
+              ),
+              
+              // Modern minimal progress bars
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 12,
+                left: 16,
+                right: 16,
+                child: AnimatedBuilder(
+                  animation: _uiFadeAnimation,
+                  builder: (context, child) {
+                    return Opacity(
+                      opacity: _uiFadeAnimation.value,
+                      child: Row(
+                        children: List.generate(
+                          widget.stories.length,
+                          (index) => Expanded(
+                            child: Container(
+                              height: 2,
+                              margin: EdgeInsets.only(
+                                right: index < widget.stories.length - 1 ? 6 : 0,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.4),
+                                borderRadius: BorderRadius.circular(1),
+                              ),
+                              child: index < _progressControllers.length 
+                                  ? AnimatedBuilder(
+                                      animation: _progressControllers[index],
+                                      builder: (context, child) {
+                                        return FractionallySizedBox(
+                                          alignment: Alignment.centerLeft,
+                                          widthFactor: _progressControllers[index].value,
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius: BorderRadius.circular(1),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.white.withOpacity(0.3),
+                                                  blurRadius: 4,
+                                                  offset: const Offset(0, 0),
+                                                ),
+                                              ],
+                                            ),
                                           ),
-                                        ),
-                                      );
-                                    },
-                                  )
-                                : Container(),
+                                        );
+                                      },
+                                    )
+                                  : Container(),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    // User info
-                    if (_currentIndex < widget.stories.length)
-                      Row(
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                            ),
-                            child: CircleAvatar(
-                              radius: 20,
-                              backgroundColor: const Color(0xFFFF7043),
-                              child: Icon(
-                                widget.stories[_currentIndex].mediaType == 'video'
-                                    ? Icons.videocam
-                                    : Icons.restaurant,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                    );
+                  },
+                ),
+              ),
+              
+              // Modern minimal top bar
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 24,
+                left: 16,
+                right: 16,
+                child: AnimatedBuilder(
+                  animation: _uiFadeAnimation,
+                  builder: (context, child) {
+                    return Opacity(
+                      opacity: _uiFadeAnimation.value,
+                      child: _currentIndex < widget.stories.length
+                          ? Row(
                               children: [
-                                Text(
-                                  widget.stories[_currentIndex].userName,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
+                                // Clean user info
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.3),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.2),
+                                      width: 0.5,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 32,
+                                        height: 32,
+                                        decoration: BoxDecoration(
+                                          gradient: const LinearGradient(
+                                            colors: [Color(0xFFFF7043), Color(0xFFFF5722)],
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                          ),
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(0xFFFF7043).withOpacity(0.3),
+                                              blurRadius: 6,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Icon(
+                                          widget.stories[_currentIndex].mediaType == 'video'
+                                              ? Icons.videocam
+                                              : Icons.restaurant,
+                                          color: Colors.white,
+                                          size: 16,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            widget.stories[_currentIndex].userName,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              shadows: [
+                                                Shadow(
+                                                  color: Colors.black54,
+                                                  offset: Offset(0, 1),
+                                                  blurRadius: 2,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          Text(
+                                            _getTimeAgo(widget.stories[_currentIndex].timestamp),
+                                            style: const TextStyle(
+                                              color: Colors.white70,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w400,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(width: 8),
+                                    ],
                                   ),
                                 ),
-                                Text(
-                                  _getTimeAgo(widget.stories[_currentIndex].timestamp),
-                                  style: TextStyle(
-                                    color: Colors.white.withOpacity(0.8),
-                                    fontSize: 12,
+                                
+                                const Spacer(),
+                                
+                                // Minimal pause indicator
+                                if (_isPaused)
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.4),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.pause,
+                                      color: Colors.white,
+                                      size: 16,
+                                    ),
+                                  ),
+                                
+                                const SizedBox(width: 8),
+                                
+                                // Close button
+                                GestureDetector(
+                                  onTap: _closeViewer,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.4),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.close,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
                                   ),
                                 ),
                               ],
-                            ),
-                          ),
-                          if (_isPaused)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.pause,
-                                    color: Colors.white,
-                                    size: 16,
-                                  ),
-                                  SizedBox(width: 4),
-                                  Text(
-                                    'Paused',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          IconButton(
-                            onPressed: _closeViewer,
-                            icon: const Icon(
-                              Icons.close,
-                              color: Colors.white,
-                              size: 24,
-                            ),
-                          ),
-                        ],
-                      ),
-                  ],
+                            )
+                          : Container(),
+                    );
+                  },
                 ),
               ),
-            ),
-            
-            // Navigation hints (left/right areas)
-            if (_currentIndex > 0)
+              
+              // Modern bottom interaction area
               Positioned(
+                bottom: 0,
                 left: 0,
-                top: 0,
-                bottom: 0,
-                width: MediaQuery.of(context).size.width / 3,
-                child: Container(
-                  color: Colors.transparent,
-                  child: Center(
-                    child: AnimatedOpacity(
-                      opacity: _isPaused ? 0.8 : 0.3,
-                      duration: const Duration(milliseconds: 200),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.4),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back_ios,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            if (_currentIndex < widget.stories.length - 1)
-              Positioned(
                 right: 0,
-                top: 0,
-                bottom: 0,
-                width: MediaQuery.of(context).size.width / 3,
-                child: Container(
-                  color: Colors.transparent,
-                  child: Center(
-                    child: AnimatedOpacity(
-                      opacity: _isPaused ? 0.8 : 0.3,
-                      duration: const Duration(milliseconds: 200),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.4),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.arrow_forward_ios,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            
-            // Bottom story info with swipe down hint
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    colors: [
-                      Colors.black.withOpacity(0.5),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Swipe down indicator
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: AnimatedOpacity(
-                        opacity: _isPaused ? 0.8 : 0.5,
-                        duration: const Duration(milliseconds: 300),
-                        child: const Column(
-                          children: [
-                            Icon(
-                              Icons.keyboard_arrow_down,
-                              color: Colors.white70,
-                              size: 20,
+                child: AnimatedBuilder(
+                  animation: _uiFadeAnimation,
+                  builder: (context, child) {
+                    return Transform.translate(
+                      offset: Offset(0, _showReplyInput ? 0 : (1 - _uiFadeAnimation.value) * 100),
+                      child: GestureDetector(
+                        onTap: () {
+                          // Previene la chiusura della tastiera nell'area di input
+                        },
+                        child: Container(
+                          padding: EdgeInsets.only(
+                            left: 20,
+                            right: 20,
+                            bottom: MediaQuery.of(context).padding.bottom + 20,
+                            top: 20,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.bottomCenter,
+                              end: Alignment.topCenter,
+                              colors: [
+                                Colors.black.withOpacity(0.8),
+                                Colors.black.withOpacity(0.4),
+                                Colors.transparent,
+                              ],
+                              stops: const [0.0, 0.5, 1.0],
                             ),
-                            Text(
-                              'Swipe down to close',
-                              style: TextStyle(
-                                color: Colors.white60,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    if (_currentIndex < widget.stories.length)
-                      Text(
-                        widget.stories[_currentIndex].mediaType == 'video'
-                            ? '🎥 Recipe Video'
-                            : '📸 Recipe Photo',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '${_currentIndex + 1} of ${widget.stories.length}',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Quick reactions - minimal design
+                              if (!_showReplyInput)
+                                Container(
+                                  margin: const EdgeInsets.only(bottom: 20),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      _buildMinimalReaction('❤️'),
+                                      _buildMinimalReaction('😍'),
+                                      _buildMinimalReaction('😂'),
+                                      _buildMinimalReaction('🔥'),
+                                      _buildMinimalReaction('👨‍🍳'),
+                                    ],
+                                  ),
+                                ),
+                              
+                              // Reply input or action buttons
+                              _showReplyInput
+                                  ? _buildMinimalReplyInput()
+                                  : _buildMinimalActionButtons(),
+                            ],
                           ),
                         ),
-                        const Row(
-                          children: [
-                            Icon(
-                              Icons.swipe_left,
-                              color: Colors.white60,
-                              size: 12,
-                            ),
-                            SizedBox(width: 4),
-                            Text(
-                              'Tap sides to navigate',
-                              style: TextStyle(
-                                color: Colors.white60,
-                                fontSize: 10,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
+                      ),
+                    );
+                  },
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMinimalReaction(String emoji) {
+    return GestureDetector(
+      onTap: () => _sendQuickReaction(emoji),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: Colors.white.withOpacity(0.3),
+            width: 0.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
+        child: Text(
+          emoji,
+          style: const TextStyle(fontSize: 20),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMinimalActionButtons() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Minimal message input
+          Expanded(
+            child: GestureDetector(
+              onTap: _toggleReplyInput,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.2),
+                    width: 0.5,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.message_outlined,
+                      color: Colors.white.withOpacity(0.9),
+                      size: 18,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Reply...',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          
+          // Minimal heart button
+          GestureDetector(
+            onTap: () => _sendQuickReaction('❤️'),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFF6B9D), Color(0xFFE91E63)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFE91E63).withOpacity(0.4),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.favorite,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMinimalReplyInput() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.4),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: _toggleReplyInput,
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.2),
+                  width: 0.5,
+                ),
+              ),
+              child: Icon(
+                Icons.close,
+                color: Colors.white.withOpacity(0.9),
+                size: 18,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.2),
+                  width: 0.5,
+                ),
+              ),
+              child: TextField(
+                controller: _replyController,
+                focusNode: _replyFocusNode,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Reply to ${widget.stories[_currentIndex].userName}...',
+                  hintStyle: TextStyle(
+                    color: Colors.white.withOpacity(0.7),
+                    fontSize: 14,
+                  ),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                onSubmitted: (_) => _sendStoryReply(),
+                onChanged: (text) {
+                  setState(() {
+                    _isTypingReply = text.isNotEmpty;
+                  });
+                },
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            child: GestureDetector(
+              onTap: _isTypingReply ? _sendStoryReply : null,
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  gradient: _isTypingReply 
+                      ? const LinearGradient(
+                          colors: [Color(0xFFFF7043), Color(0xFFFF5722)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : null,
+                  color: _isTypingReply ? null : Colors.white.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.2),
+                    width: 0.5,
+                  ),
+                ),
+                child: Icon(
+                  Icons.send,
+                  color: _isTypingReply 
+                      ? Colors.white
+                      : Colors.white.withOpacity(0.5),
+                  size: 18,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -562,12 +869,20 @@ class _StoryViewerState extends State<StoryViewer>
               loadingBuilder: (context, child, loadingProgress) {
                 if (loadingProgress == null) return child;
                 return Center(
-                  child: CircularProgressIndicator(
-                    value: loadingProgress.expectedTotalBytes != null
-                        ? loadingProgress.cumulativeBytesLoaded /
-                            loadingProgress.expectedTotalBytes!
-                        : null,
-                    color: const Color(0xFFFF7043),
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: CircularProgressIndicator(
+                      value: loadingProgress.expectedTotalBytes != null
+                          ? loadingProgress.cumulativeBytesLoaded /
+                              loadingProgress.expectedTotalBytes!
+                          : null,
+                      color: const Color(0xFFFF7043),
+                      strokeWidth: 2,
+                    ),
                   ),
                 );
               },
@@ -583,16 +898,35 @@ class _StoryViewerState extends State<StoryViewer>
     return Container(
       width: double.infinity,
       height: double.infinity,
-      color: Colors.grey[900],
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.grey[900]!,
+            Colors.black,
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+      ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 80,
-            height: 80,
-            decoration: const BoxDecoration(
-              color: Color(0xFFFF7043),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFFF7043), Color(0xFFFF5722)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFF7043).withOpacity(0.4),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
             child: const Icon(
               Icons.play_arrow,
@@ -600,21 +934,20 @@ class _StoryViewerState extends State<StoryViewer>
               size: 40,
             ),
           ),
-          const SizedBox(height: 20),
-          const Text(
-            'Video Playing...',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.6),
+              borderRadius: BorderRadius.circular(20),
             ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            'Recipe by ${story.userName}',
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
+            child: const Text(
+              'Video Recipe',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -626,16 +959,28 @@ class _StoryViewerState extends State<StoryViewer>
     return Container(
       width: double.infinity,
       height: double.infinity,
-      color: Colors.grey[900],
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFFFF7043).withOpacity(0.8),
+            const Color(0xFFFF5722).withOpacity(0.9),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 120,
-            height: 120,
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(0xFFFF7043),
+              color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.3),
+                width: 1,
+              ),
             ),
             child: const Icon(
               Icons.restaurant_menu,
@@ -643,21 +988,36 @@ class _StoryViewerState extends State<StoryViewer>
               size: 60,
             ),
           ),
-          const SizedBox(height: 30),
+          const SizedBox(height: 24),
           Text(
             story.userName,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 24,
               fontWeight: FontWeight.bold,
+              shadows: [
+                Shadow(
+                  color: Colors.black54,
+                  offset: Offset(0, 2),
+                  blurRadius: 4,
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 10),
-          const Text(
-            'Recipe Story',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 16,
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Text(
+              'Recipe Story',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
@@ -670,13 +1030,117 @@ class _StoryViewerState extends State<StoryViewer>
     final difference = now.difference(timestamp);
     
     if (difference.inDays > 0) {
-      return '${difference.inDays}d ago';
+      return '${difference.inDays}d';
     } else if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
+      return '${difference.inHours}h';
     } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m ago';
+      return '${difference.inMinutes}m';
     } else {
       return 'now';
     }
+  }
+}
+
+// Widget for animated reactions
+class AnimatedReactionWidget extends StatefulWidget {
+  final String emoji;
+  final VoidCallback onComplete;
+
+  const AnimatedReactionWidget({
+    super.key,
+    required this.emoji,
+    required this.onComplete,
+  });
+
+  @override
+  State<AnimatedReactionWidget> createState() => _AnimatedReactionWidgetState();
+}
+
+class _AnimatedReactionWidgetState extends State<AnimatedReactionWidget>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _opacityAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+
+    _scaleAnimation = Tween<double>(
+      begin: 0.5,
+      end: 1.2,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.0, 0.3, curve: Curves.elasticOut),
+    ));
+
+    _opacityAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.7, 1.0, curve: Curves.easeOut),
+    ));
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0),
+      end: const Offset(0, -2),
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.3, 1.0, curve: Curves.easeOut),
+    ));
+
+    _controller.forward().then((_) => widget.onComplete());
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: Center(
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: _scaleAnimation.value,
+              child: Transform.translate(
+                offset: _slideAnimation.value * 100,
+                child: Opacity(
+                  opacity: _opacityAnimation.value,
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.6),
+                      borderRadius: BorderRadius.circular(50),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      widget.emoji,
+                      style: const TextStyle(fontSize: 40),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
   }
 }

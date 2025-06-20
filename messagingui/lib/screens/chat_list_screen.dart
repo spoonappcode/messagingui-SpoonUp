@@ -4,6 +4,7 @@ import '../models/story.dart';
 import '../widgets/chat_list_item.dart';
 import '../widgets/stories_bar.dart';
 import '../widgets/chat_settings_bottom_sheet.dart';
+import 'chat_screen.dart';
 
 class ChatListScreen extends StatefulWidget {
   const ChatListScreen({super.key});
@@ -378,10 +379,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
         chat: chat,
         onTap: () {
           // Navigate to specific chat
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Opening chat with ${chat.name}'),
-              backgroundColor: const Color(0xFFFF7043),
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ChatScreen(chat: chat),
             ),
           );
         },
@@ -972,106 +973,112 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: const Color(0xFFFF7043),
-        title: const Row(
-          children: [
-            Icon(Icons.restaurant, color: Colors.white, size: 24),
-            SizedBox(width: 8),
-            Text(
-              'SpoonUp',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
+    return GestureDetector(
+      onTap: () {
+        // Nasconde la tastiera quando si tocca fuori dall'area di ricerca
+        FocusScope.of(context).unfocus();
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: const Color(0xFFFF7043),
+          title: const Row(
+            children: [
+              Icon(Icons.restaurant, color: Colors.white, size: 24),
+              SizedBox(width: 8),
+              Text(
+                'SpoonUp',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                ),
               ),
+            ],
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.more_vert, color: Colors.white),
+              onPressed: () {
+                _showAppMenu();
+              },
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.more_vert, color: Colors.white),
-            onPressed: () {
-              _showAppMenu();
-            },
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          StoriesBar(stories: stories),
-          Container(
-            padding: const EdgeInsets.all(16.0),
-            color: const Color(0xFFFFF3E0),
-            child: TextField(
-              controller: searchController,
-              decoration: InputDecoration(
-                hintText: 'Search chats or recipes...',
-                prefixIcon: const Icon(Icons.search, color: Color(0xFFFF7043)),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(25),
-                  borderSide: BorderSide.none,
+        body: Column(
+          children: [
+            StoriesBar(stories: stories),
+            Container(
+              padding: const EdgeInsets.all(16.0),
+              color: const Color(0xFFFFF3E0),
+              child: TextField(
+                controller: searchController,
+                decoration: InputDecoration(
+                  hintText: 'Search chats or recipes...',
+                  prefixIcon: const Icon(Icons.search, color: Color(0xFFFF7043)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(25),
+                    borderSide: BorderSide.none,
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20),
                 ),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20),
               ),
             ),
-          ),
-          Expanded(
-            child: filteredChats.isEmpty
-                ? const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.restaurant_menu,
-                          size: 64,
-                          color: Colors.grey,
-                        ),
-                        SizedBox(height: 16),
-                        Text(
-                          'No chats found',
-                          style: TextStyle(
-                            fontSize: 18,
+            Expanded(
+              child: filteredChats.isEmpty
+                  ? const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.restaurant_menu,
+                            size: 64,
                             color: Colors.grey,
                           ),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Start a new conversation!',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey,
+                          SizedBox(height: 16),
+                          Text(
+                            'No chats found',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.grey,
+                            ),
                           ),
-                        ),
-                      ],
+                          SizedBox(height: 8),
+                          Text(
+                            'Start a new conversation!',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: _refreshChats,
+                      color: const Color(0xFFFF7043),
+                      backgroundColor: Colors.white,
+                      strokeWidth: 2.5,
+                      child: ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        itemCount: filteredChats.length,
+                        itemBuilder: (context, index) {
+                          final chat = filteredChats[index];
+                          return _buildSwipeableChatItem(chat, index);
+                        },
+                      ),
                     ),
-                  )
-                : RefreshIndicator(
-                    onRefresh: _refreshChats,
-                    color: const Color(0xFFFF7043),
-                    backgroundColor: Colors.white,
-                    strokeWidth: 2.5,
-                    child: ListView.builder(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      itemCount: filteredChats.length,
-                      itemBuilder: (context, index) {
-                        final chat = filteredChats[index];
-                        return _buildSwipeableChatItem(chat, index);
-                      },
-                    ),
-                  ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showNewChatOptions,
-        backgroundColor: const Color(0xFFFF7043),
-        child: const Icon(Icons.add, color: Colors.white),
+            ),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: _showNewChatOptions,
+          backgroundColor: const Color(0xFFFF7043),
+          child: const Icon(Icons.add, color: Colors.white),
+        ),
       ),
     );
   }
